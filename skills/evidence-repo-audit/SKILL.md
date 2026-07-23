@@ -111,6 +111,19 @@ schemas, and human approval gates exist where the claimed safety model requires
 them. An allowlist that merely auto-approves named tools is not proof that all
 other tools are unavailable.
 
+For durable workflows, inspect:
+
+- whether every step and state transition is persisted
+- retry, timeout, backoff, and terminal-failure rules
+- idempotency and duplicate-delivery behavior
+- recovery after worker, process, database, or network failure
+- replay from the beginning and from a failed step
+- separation between deterministic orchestration and side-effecting workers
+
+Treat an LLM-generated workflow definition as untrusted input. Validate its
+schema, allowed task types, tool scope, and approval requirements before
+execution.
+
 ### 7. Produce the decision-ready report
 
 Lead with:
@@ -168,6 +181,7 @@ findings; evidence and reproduction do.
 - using an external reviewer without explicit authorization
 - accepting a model-authored handoff or financial action without schema,
   allowlist, and approval checks
+- calling a workflow durable without crash recovery, retry, and replay evidence
 
 ## Verification
 
@@ -177,6 +191,7 @@ findings; evidence and reproduction do.
 - [ ] Confirmed, refuted, unverified, and not-checked claims remain distinct
 - [ ] Runtime claims are backed by runtime evidence
 - [ ] Agent tool permissions, denials, hooks, and handoffs were checked independently
+- [ ] Workflow persistence, retries, idempotency, recovery, and replay were checked
 - [ ] High-stakes outputs remain staged for qualified human approval
 - [ ] Top actions follow from confirmed findings
 - [ ] Structural work is preceded by characterization tests
