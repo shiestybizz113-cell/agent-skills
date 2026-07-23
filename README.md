@@ -118,15 +118,22 @@ Skills are plain Markdown - they work with any agent that accepts system prompts
 
 ---
 
-## All 23 Skills
+## All 25 Skills
 
-The commands above are entry points. The pack includes 23 skills total — 22 lifecycle skills plus the `using-agent-skills` meta-skill. Each skill is a structured workflow with steps, verification gates, and anti-rationalization tables. You can also reference any skill directly.
+The commands above are entry points. The pack includes 25 skills total — 24 lifecycle skills plus the `using-agent-skills` meta-skill. Each skill is a structured workflow with steps, verification gates, and anti-rationalization tables. You can also reference any skill directly.
 
 ### Meta - Discover which skill applies
 
 | Skill | What It Does | Use When |
 |-------|-------------|----------|
 | [using-agent-skills](skills/using-agent-skills/SKILL.md) | Maps incoming work to the right skill workflow and defines shared operating rules | Starting a session or deciding which skill applies |
+
+### Workspace - Stay scoped in shared folders
+
+| Skill | What It Does | Use When |
+|-------|-------------|----------|
+| [workspace-triage](skills/workspace-triage/SKILL.md) | Chooses the correct repo, worktree, or mutable source of truth inside a shared workspace before edits begin | A request could land in the wrong repo, proof copy, archive, or recovery bundle |
+| [safe-release-scope](skills/safe-release-scope/SKILL.md) | Produces repo-by-repo staging and push plans while blocking secrets, runtime state, and broad workspace commits | Preparing commits, pushes, or PRs in a multi-repo workspace |
 
 ### Define - Clarify what to build
 
