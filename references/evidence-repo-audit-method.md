@@ -127,6 +127,12 @@ method without becoming runtime dependencies:
   references, detect drift between source skills and bundled copies, treat
   model-authored handoffs as untrusted, allowlist destinations, and stage
   financial work for qualified human sign-off rather than execution.
+- [Conductor](https://github.com/conductor-oss/conductor):
+  audit durable orchestration through persisted steps, configurable retries and
+  timeouts, crash recovery, idempotent workers, and replay from a failed task.
+  Keep deterministic workflow state separate from side-effecting business
+  logic, and validate any workflow definition generated dynamically by an LLM
+  before execution.
 
 These sources are reference patterns only. The audit workflow remains
 provider-neutral and can run without Anthropic services.
