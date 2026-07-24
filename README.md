@@ -28,6 +28,15 @@ Skills also activate automatically based on what you're doing — designing an A
 
 ## Quick Start
 
+Initialize the workspace safety hooks from a local checkout:
+
+```bash
+python3 scripts/init --workspace /absolute/path/to/workspace
+```
+
+Preview the exact changes first with `--dry-run`. The initializer preserves
+existing settings, creates a timestamped backup, and adds each hook once.
+
 <details>
 <summary><b>Claude Code (recommended)</b></summary>
 
@@ -118,9 +127,9 @@ Skills are plain Markdown - they work with any agent that accepts system prompts
 
 ---
 
-## All 25 Skills
+## All 26 Skills
 
-The commands above are entry points. The pack includes 25 skills total — 24 lifecycle skills plus the `using-agent-skills` meta-skill. Each skill is a structured workflow with steps, verification gates, and anti-rationalization tables. You can also reference any skill directly.
+The commands above are entry points. The pack includes 26 skills total — 25 lifecycle and product skills plus the `using-agent-skills` meta-skill. Each skill is a structured workflow with steps, verification gates, and anti-rationalization tables. You can also reference any skill directly.
 
 ### Meta - Discover which skill applies
 
@@ -134,6 +143,12 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 |-------|-------------|----------|
 | [workspace-triage](skills/workspace-triage/SKILL.md) | Chooses the correct repo, worktree, or mutable source of truth inside a shared workspace before edits begin | A request could land in the wrong repo, proof copy, archive, or recovery bundle |
 | [safe-release-scope](skills/safe-release-scope/SKILL.md) | Produces repo-by-repo staging and push plans while blocking secrets, runtime state, and broad workspace commits | Preparing commits, pushes, or PRs in a multi-repo workspace |
+
+### Product - Build Empire operating systems
+
+| Skill | What It Does | Use When |
+|-------|-------------|----------|
+| [fable-5-builder](skills/fable-5-builder/SKILL.md) | Builds and connects the governed FABLE-5 control plane while separating seeded state from live execution | Work touches FABLE-5, its six workspaces, evidence, mission queue, autonomy, allocation, or intent tokens |
 
 ### Define - Clarify what to build
 
