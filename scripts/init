@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""Install the agent-skills workspace hooks without replacing user settings."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import stat
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+PRE_MATCHER = "Edit|Write|MultiEdit"
+POST_MATCHER = "Edit|Write|MultiEdit"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Install agent-skills hooks into one Claude workspace.",
+    )
+    parser.add_argument(
+        "--workspace",
+        default=".",
+        help="Workspace directory to initialize (default: current directory).",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the files that would change without writing them.",
+    )
+    return parser.parse_args()
+
+
+def agent_skills_root() -> Path:
+    configured = os.environ.get("AGENT_SKILLS_ROOT")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return Path(__file__).resolve().parents[1]
+
+
+def load_settings(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"Refusing to replace invalid JSON in {path}: line {exc.lineno}, column {exc.colno}"
+        ) from exc
+    if not isinstance(value, dict):
+        raise SystemExit(f"Refusing to replace non-object JSON in {path}")
+    return value
+
+
+def hook_entry(matcher: str, command: str, timeout: int) -> dict[str, Any]:
+    return {
+        "matcher": matcher,
+        "hooks": [
+            {
+                "type": "command",
+                "command": command,
+                "timeout": timeout,
+            }
+        ],
+    }
+
+
+def contains_command(entries: list[Any], command: str) -> bool:
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        hooks = entry.get("hooks")
+        if not isinstance(hooks, list):
+            continue
+        for hook in hooks:
+            if isinstance(hook, dict) and hook.get("command") == command:
+                return True
+    return False
+
+
+def merge_settings(
+    settings: dict[str, Any],
+    *,
+    pre_command: str,
+    post_command: str,
+) -> tuple[dict[str, Any], bool]:
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        raise SystemExit("Refusing to replace settings key 'hooks' because it is not an object")
+
+    changed = False
+    for event, matcher, command, timeout in (
+        ("PreToolUse", PRE_MATCHER, pre_command, 5),
+        ("PostToolUse", POST_MATCHER, post_command, 60),
+    ):
+        entries = hooks.setdefault(event, [])
+        if not isinstance(entries, list):
+            raise SystemExit(
+                f"Refusing to replace settings key 'hooks.{event}' because it is not a list"
+            )
+        if not contains_command(entries, command):
+            entries.append(hook_entry(matcher, command, timeout))
+            changed = True
+    return settings, changed
+
+
+def atomic_write(path: Path, content: str, mode: int | None = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary_path = Path(temporary)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if mode is not None:
+            temporary_path.chmod(mode)
+        os.replace(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def backup(path: Path) -> Path | None:
+    if not path.exists():
+        return None
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    destination = path.with_name(f"{path.name}.backup-{stamp}")
+    shutil.copy2(path, destination)
+    return destination
+
+
+def main() -> int:
+    args = parse_args()
+    root = agent_skills_root()
+    workspace = Path(args.workspace).expanduser().resolve()
+    if not workspace.is_dir():
+        raise SystemExit(f"Workspace does not exist or is not a directory: {workspace}")
+
+    sources = {
+        "pre": root / "hooks" / "workspace-pre-edit-guard.sh",
+        "post": root / "hooks" / "workspace-post-edit-validate.py",
+    }
+    missing = [str(path) for path in sources.values() if not path.is_file()]
+    if missing:
+        raise SystemExit(f"agent-skills hook source missing: {', '.join(missing)}")
+
+    hooks_dir = workspace / ".claude" / "hooks"
+    targets = {
+        "pre": hooks_dir / "agent-skills-pre-edit-guard.sh",
+        "post": hooks_dir / "agent-skills-post-edit-validate.py",
+    }
+    settings_path = workspace / ".claude" / "settings.local.json"
+
+    settings = load_settings(settings_path)
+    pre_command = f"bash {targets['pre']}"
+    post_command = f"python3 {targets['post']}"
+    merged, settings_changed = merge_settings(
+        settings,
+        pre_command=pre_command,
+        post_command=post_command,
+    )
+
+    planned = [
+        f"copy {sources['pre']} -> {targets['pre']}",
+        f"copy {sources['post']} -> {targets['post']}",
+    ]
+    if settings_changed:
+        planned.append(f"merge hooks into {settings_path}")
+    else:
+        planned.append(f"settings already contain agent-skills hooks: {settings_path}")
+
+    if args.dry_run:
+        print("DRY RUN")
+        print("\n".join(planned))
+        return 0
+
+    pre_content = sources["pre"].read_text(encoding="utf-8")
+    post_content = sources["post"].read_text(encoding="utf-8")
+    executable = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP
+    atomic_write(targets["pre"], pre_content, executable)
+    atomic_write(targets["post"], post_content, executable)
+
+    settings_backup = backup(settings_path) if settings_changed else None
+    if settings_changed:
+        atomic_write(settings_path, json.dumps(merged, indent=2) + "\n")
+
+    print("\n".join(planned))
+    if settings_backup:
+        print(f"backup {settings_backup}")
+    print("agent-skills workspace hooks installed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
