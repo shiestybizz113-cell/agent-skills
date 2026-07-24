@@ -4,8 +4,8 @@
   "author": {
     "name": "Addy Osmani"
   },
-  "homepage": "https://github.com/addyosmani/agent-skills",
-  "repository": "https://github.com/addyosmani/agent-skills",
+  "homepage": "https://github.com/shiestybizz113-cell/agent-skills",
+  "repository": "https://github.com/shiestybizz113-cell/agent-skills",
   "license": "MIT",
   "commands": "./.claude/commands",
   "skills": "./skills",
