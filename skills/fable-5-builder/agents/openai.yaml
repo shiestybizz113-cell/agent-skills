@@ -1,0 +1,7 @@
+interface:
+  display_name: "FABLE-5 Builder"
+  short_description: "Build the governed FABLE-5 control plane"
+  default_prompt: "Use $fable-5-builder to connect and verify the next real FABLE-5 operating slice."
+
+policy:
+  allow_implicit_invocation: true
