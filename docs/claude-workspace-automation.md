@@ -18,7 +18,18 @@ worktrees.
 
 ## Recommended Setup
 
-Add hook entries to the target workspace's `.claude/settings.json` or
+Run the idempotent initializer from this repository:
+
+```bash
+python3 scripts/init --workspace /absolute/path/to/workspace
+```
+
+Use `--dry-run` to preview. The initializer copies the hooks into the target
+workspace, preserves existing settings, creates a timestamped backup, and adds
+each hook once.
+
+Manual setup remains available when you need custom hook placement. Add hook
+entries to the target workspace's `.claude/settings.json` or
 `.claude/settings.local.json`.
 
 If you cloned `agent-skills` locally and want to run the hooks directly from
